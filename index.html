@@ -371,7 +371,7 @@
     <!-- data dinâmica -->
     <div class="sub-info">
         <span><i class="far fa-clock"></i> <strong id="dataCompleta"></strong></span>
-        <span class="data-dinamica"><i class="fas fa-clipboard-list"></i> Relatório semanal — colaborador</span>
+        <span class="data-dinamica"><i class="fas fa-clipboard-list"></i> Relatório semanal — gestão</span>
     </div>
 
     <!-- CHECKLIST com todas as categorias e tarefas -->
@@ -557,6 +557,19 @@
             </div>
         </div>
 
+        <!-- cozinha 5: uso de toucas -->
+        <div class="item-checklist" data-task="cozinhaToucas">
+            <div class="item-linha-principal">
+                <i class="fas fa-user-shield"></i>
+                <span>Cozinha: uso de toucas (manipulação)</span>
+                <span class="pontuacao-item"><i class="fas fa-star"></i> 5</span>
+            </div>
+            <div class="status-selector" data-task-id="cozinhaToucas">
+                <div class="status-opcao" data-status="feito"><i class="fas fa-check-circle"></i> Feito</div>
+                <div class="status-opcao selected" data-status="nao-feito"><i class="fas fa-times-circle"></i> Não feito</div>
+            </div>
+        </div>
+
         <!-- CATEGORIA: TAREFAS SEMANAIS (adicionais) -->
         <div class="categoria-titulo"><i class="fas fa-calendar-week"></i> Tarefas Semanais</div>
         
@@ -690,7 +703,7 @@
     <div class="resumo-semanal">
         <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
             <div class="pontuacao-total" id="pontuacaoTotalDisplay">
-                <i class="fas fa-trophy"></i> <span id="pontosObtidos">0</span>/100
+                <i class="fas fa-trophy"></i> <span id="pontosObtidos">0</span>/<span id="pontosTotal">100</span>
             </div>
             <div class="contador-tarefas" id="contadorTarefas">
                 <i class="fa-solid fa-list-check"></i> <span id="tarefasFeitas">0</span>/<span id="tarefasTotal">26</span>
@@ -742,6 +755,7 @@
             { id: 'cozinhaFrutas', descricao: 'Cozinha: higienizar frutas / alimentos', pontos: 6 },
             { id: 'cozinhaLouca', descricao: 'Cozinha: louça limpa e guardada', pontos: 7 },
             { id: 'cozinhaBancada', descricao: 'Cozinha: bancada organizada e limpa', pontos: 7 },
+            { id: 'cozinhaToucas', descricao: 'Cozinha: uso de toucas (manipulação)', pontos: 5 },
             
             // Semanais
             { id: 'semanalVidros', descricao: 'Lavar vidros (janelas/portas)', pontos: 8 },
@@ -762,13 +776,18 @@
         const spanFeitas = document.getElementById('tarefasFeitas');
         const spanTotal = document.getElementById('tarefasTotal');
         const spanPontos = document.getElementById('pontosObtidos');
+        const spanPontosTotal = document.getElementById('pontosTotal');
         const btnGerar = document.getElementById('gerarRelatorioBtn');
         const btnPdf = document.getElementById('salvarPdfBtn');
         const relatorioTexto = document.getElementById('relatorioTexto');
         const assinaturaSpan = document.getElementById('assinaturaData');
-        const semanaSpan = document.getElementById('semanaAtual');
         const dataCompletaSpan = document.getElementById('dataCompleta');
         const relatorioOutput = document.getElementById('relatorioOutput');
+        const checklistContainer = document.getElementById('checklistContainer');
+        const semanaSpan = document.getElementById('semanaAtual');
+
+        const totalPontosPossiveis = tarefas.reduce((acc, t) => acc + t.pontos, 0);
+        spanPontosTotal.textContent = totalPontosPossiveis;
 
         // Inicializa datas
         function obterSemanaAtual() {
@@ -801,6 +820,7 @@
                 selector.querySelectorAll('.status-opcao').forEach(opt => opt.classList.remove('selected'));
                 this.classList.add('selected');
                 atualizarPontuacaoContador();
+                exibirRelatorioNoOutput();
             });
         });
 
@@ -812,7 +832,7 @@
             return selected ? selected.dataset.status : 'nao-feito';
         }
 
-        // Atualizar contador de tarefas e pontuação total
+       // Atualizar contador de tarefas e pontuação total
         function atualizarPontuacaoContador() {
             let feitas = 0;
             let pontos = 0;
@@ -829,57 +849,53 @@
             spanPontos.textContent = pontos;
         }
 
-        // Gerar relatório com base nos status e pontuação
-        function gerarRelatorio() {
+        // Gerar relatório SÓ com as tarefas "Feito" (e um resumo)
+        function gerarRelatorio(apenasFeitos = false) {
             const feitos = [];
             const pendentes = [];
             let pontosTotais = 0;
-
+        
             tarefas.forEach(tarefa => {
                 if (getStatus(tarefa.id) === 'feito') {
                     feitos.push(`${tarefa.descricao} (${tarefa.pontos} pts)`);
                     pontosTotais += tarefa.pontos;
                 } else {
-                    pendentes.push(tarefa.descricao);
+                    pendentes.push(`${tarefa.descricao}`);
                 }
             });
-
+        
             const dataAtual = formatarDataBrasil();
             const semana = obterSemanaAtual();
-
+        
             let relatorio = `📋 GELATO RANCH · CHECKLIST SEMANAL COMPLETO\n`;
             relatorio += `📅 ${dataAtual}  |  ${semana}\n`;
-            relatorio += `🏆 PONTUAÇÃO: ${pontosTotais}/100 pontos\n`;
+            relatorio += `🏆 PONTUAÇÃO: ${pontosTotais}/${totalPontosPossiveis} pontos\n`;
             relatorio += `────────────────────────────\n`;
             relatorio += `✅ Tarefas concluídas (${feitos.length}/${tarefas.length}):\n`;
-            if (feitos.length === 0) {
-                relatorio += `   (nenhuma tarefa marcada como "Feito")\n`;
-            } else {
-                feitos.forEach(item => relatorio += `   • ${item}\n`);
-            }
-
+            feitos.forEach(item => relatorio += `   • ${item}\n`);
+            
             if (pendentes.length > 0) {
-                relatorio += `\n⏳ Pendentes / não realizadas (${pendentes.length}):\n`;
-                pendentes.forEach(item => relatorio += `   ◦ ${item}\n`);
-            } else {
-                relatorio += `\n✨ Todas as tarefas foram concluídas! Parabéns, equipe!\n`;
+                relatorio += `────────────────────────────\n`;
+                relatorio += `⚠️ Pendentes / Não conformes (${pendentes.length}):\n`;
+                pendentes.forEach(item => relatorio += `   • ${item}\n`);
             }
-
+            
             relatorio += `────────────────────────────\n`;
             relatorio += `🧼 Limpeza semanal finalizada. Gelato Ranch sempre impecável.`;
-
+        
             return relatorio;
         }
 
         // Exibir relatório no output
-        function exibirRelatorioNoOutput() {
-            const texto = gerarRelatorio();
+        function exibirRelatorioNoOutput(apenasFeitos = false) {
+            const texto = gerarRelatorio(apenasFeitos);
             const textoHtml = texto.replace(/\n/g, '<br>')
                 .replace(/✅/g, '<i class="fa-regular fa-circle-check" style="color:#2a73b3;"></i>')
                 .replace(/⏳/g, '<i class="fa-regular fa-clock" style="color:#b57c4c;"></i>')
                 .replace(/📋/g, '<i class="fa-regular fa-clipboard"></i>')
                 .replace(/📅/g, '<i class="fa-regular fa-calendar"></i>')
                 .replace(/✨/g, '<i class="fa-regular fa-star" style="color:#3d80bd;"></i>')
+                .replace(/⚠️/g, '<i class="fas fa-exclamation-triangle" style="color:#e67e22;"></i>')
                 .replace(/🧼/g, '<i class="fa-solid fa-soap"></i>')
                 .replace(/🏆/g, '<i class="fas fa-trophy" style="color:#f5b342;"></i>');
             relatorioTexto.innerHTML = textoHtml;
@@ -894,44 +910,59 @@
         // Evento do botão SALVAR PDF
         btnPdf.addEventListener('click', function() {
             atualizarPontuacaoContador();
-            exibirRelatorioNoOutput();
+            
+            // Ocultar botões para não saírem no PDF
+            const botoes = document.querySelector('.botoes-acao');
+            botoes.style.display = 'none';
+            checklistContainer.style.display = 'none';
+            
+            exibirRelatorioNoOutput(false);
+            
+            // Capturar o card inteiro (.relatorio-card) em vez de apenas o output
+            const elementoCaptura = document.querySelector('.relatorio-card');
 
-            html2canvas(relatorioOutput, {
+            // Temporariamente expandir a área de texto para capturar todo o conteúdo
+            const relatorioTextoElement = document.getElementById('relatorioTexto');
+            const originalMaxHeight = relatorioTextoElement.style.maxHeight;
+            const originalOverflowY = relatorioTextoElement.style.overflowY;
+            relatorioTextoElement.style.maxHeight = 'none';
+            relatorioTextoElement.style.overflowY = 'visible';
+
+            html2canvas(elementoCaptura, {
                 scale: 2,
-                backgroundColor: '#f2f8ff',
-                logging: false,
+                backgroundColor: '#ffffff',
+               // logging: true,
                 allowTaint: false,
                 useCORS: true
             }).then((canvas) => {
+                relatorioTextoElement.style.maxHeight = originalMaxHeight;
+                relatorioTextoElement.style.overflowY = originalOverflowY;
+                botoes.style.display = 'flex';
+                //botoes.style.visibility = 'visible';
+                checklistContainer.style.display = '';
+                exibirRelatorioNoOutput(false);
+
                 const imgData = canvas.toDataURL('image/png');
                 const { jsPDF } = window.jspdf;
                 
+                // Cria PDF com o tamanho exato do canvas para evitar cortes/escalonamento
                 const pdf = new jsPDF({
                     orientation: 'portrait',
                     unit: 'px',
-                    format: [canvas.width * 0.75, canvas.height * 0.75]
+                    format: [canvas.width, canvas.height]
                 });
 
-                const pageWidth = pdf.internal.pageSize.getWidth();
-                const pageHeight = pdf.internal.pageSize.getHeight();
-                const ratio = canvas.width / canvas.height;
-                let imgWidth = pageWidth;
-                let imgHeight = pageWidth / ratio;
-
-                if (imgHeight > pageHeight) {
-                    imgHeight = pageHeight;
-                    imgWidth = pageHeight * ratio;
-                }
-
-                const xOffset = (pageWidth - imgWidth) / 2;
-                const yOffset = (pageHeight - imgHeight) / 2;
-
-                pdf.addImage(imgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
+                pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
                 
                 const dataArquivo = new Date().toISOString().slice(0,10);
                 const pontos = document.getElementById('pontosObtidos').textContent;
                 pdf.save(`GelatoRanch_${pontos}pts_${dataArquivo}.pdf`);
             }).catch(error => {
+                relatorioTextoElement.style.maxHeight = originalMaxHeight;
+                relatorioTextoElement.style.overflowY = originalOverflowY;
+                botoes.style.display = 'flex';
+                checklistContainer.style.display = '';
+                exibirRelatorioNoOutput(false);
                 console.error('Erro ao gerar PDF:', error);
                 alert('Não foi possível gerar o PDF. Tente novamente.');
             });
@@ -939,7 +970,7 @@
 
         // Inicializa pontuação e relatório
         atualizarPontuacaoContador();
-        exibirRelatorioNoOutput();
+         exibirRelatorioNoOutput();
     })();
 </script>
 <!-- fallback para ícones regular -->
