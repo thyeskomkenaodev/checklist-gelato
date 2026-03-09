@@ -919,12 +919,12 @@
             // Ocultar botões para não saírem no PDF
             const botoes = document.querySelector('.botoes-acao');
             botoes.style.display = 'none';
-            checklistContainer.style.display = 'none';
+            checklistContainer.style.display = 'none'; // Oculta a grade de tarefas
             
             exibirRelatorioNoOutput(false);
             
-            // Capturar o card inteiro (.relatorio-card) em vez de apenas o output
-            const elementoCaptura = document.querySelector('.relatorio-card');
+            // Capturar APENAS a área do relatório de texto para o PDF
+            const elementoCaptura = document.getElementById('relatorioOutput');
 
             // Temporariamente expandir a área de texto para capturar todo o conteúdo
             const relatorioTextoElement = document.getElementById('relatorioTexto');
